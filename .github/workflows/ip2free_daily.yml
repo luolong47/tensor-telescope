@@ -2,8 +2,8 @@ name: IP2Free 每日自动领取奖励
 
 on:
   schedule:
-    # 每天北京时间 08:01 运行 (UTC 00:01)
-    - cron: '1 0 * * *'
+    # 每天北京时间 00:01 运行 (UTC 00:01)
+    - cron: '16 0 * * *'
   workflow_dispatch: # 允许手动触发测试
 
 jobs:
