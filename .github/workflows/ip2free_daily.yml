@@ -2,7 +2,7 @@ name: IP2Free 每日自动领取奖励
 
 on:
   schedule:
-    - cron: '1 16 * * *'
+    - cron: '0 16 * * *'
   workflow_dispatch: # 允许手动触发测试
 
 jobs:
@@ -22,6 +22,11 @@ jobs:
           UA: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
         run: |
           echo "=========================================="
+          # 随机延迟（0-300秒，即最高5分钟）以规避风控
+          DELAY=$((RANDOM % 300))
+          echo "⏱️ 为了规避风控，随机延迟 ${DELAY} 秒后执行..."
+          sleep $DELAY
+          
           echo "🚀 开始登录程序..."
           echo "=========================================="
           
