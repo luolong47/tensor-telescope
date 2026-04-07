@@ -62,7 +62,7 @@ jobs:
             --data-binary "{}")
 
           # 提取包含指定名称的任务 ID (jq 在 ubuntu-latest 中默认安装)
-          TASK_ID=$(echo "$LIST_RESPONSE" | jq -r '.data.list[] | select(.task_name | contains("每天一次丨点击就送无限流量住宅代理")) | .id' | head -n 1)
+          TASK_ID=$(echo "$LIST_RESPONSE" | jq -r '.data.list[] | select(.task_name | contains("点击就送")) | .id' | head -n 1)
 
           if [ -z "$TASK_ID" ] || [ "$TASK_ID" = "null" ]; then
             echo "⚠️ 未能动态获取到任务 ID，将使用默认推荐 ID 49130"
@@ -87,16 +87,15 @@ jobs:
           echo "--- 领取结果处理 ---"
           echo "服务器响应: $CLAIM_RESPONSE"
 
-          # 4. 逻辑判定：成功(code:0) 或 已完成(code:-1) 均视为流水线成功
-          if echo "$CLAIM_RESPONSE" | grep -q '"code":0'; then
+          # 4. 逻辑判定：尝试解析json进行判断
+          CODE=$(echo "$CLAIM_RESPONSE" | jq -r '.code' 2>/dev/null)
+          MSG=$(echo "$CLAIM_RESPONSE" | jq -r '.msg' 2>/dev/null)
+
+          if [ "$CODE" = "0" ]; then
             echo "🎉 领取奖励成功！"
             exit 0
-          elif echo "$CLAIM_RESPONSE" | grep -q '"code":-1'; then
-            MSG=$(echo "$CLAIM_RESPONSE" | sed -n 's/.*"msg":"\([^"]*\)".*/\1/p')
-            echo "💡 提示：$MSG (通常代表任务已完成)"
-            exit 0
           else
-            echo "❌ 发生未知错误，流水线判定为失败。"
+            echo "❌ 领取失败！(状态码: $CODE, 提示: $MSG)"
             exit 1
           fi
           echo "=========================================="
