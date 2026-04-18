@@ -71,6 +71,11 @@ jobs:
             echo "🎯 发现任务 ID: $TASK_ID"
           fi
 
+          # 模拟用户操作间隔，避免请求过快被风控
+          CLAIM_DELAY=$((RANDOM % 3 + 1))
+          echo "⏱️ 模拟用户操作间隔，延迟 ${CLAIM_DELAY} 秒后领取..."
+          sleep $CLAIM_DELAY
+
           echo "🎁 正在尝试领取任务奖励 (ID: $TASK_ID)..."
           echo "=========================================="
 
