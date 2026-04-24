@@ -90,6 +90,49 @@ def login():
         print(f"❌ 登录过程中出现异常: {e}")
         return False
 
+import base64
+
+def fetch_and_print_proxy_links():
+    """获取活动代理列表并生成 V2RayN 格式的链接"""
+    print("🔗 [Step 5] 正在提取可用代理节点链接...")
+    url = "https://api.ip2free.com/api/account/myProxyList?page=1&limit=10"
+    
+    try:
+        resp = session.get(url)
+        res_json = resp.json()
+        items = res_json.get('data', {}).get('items', [])
+        
+        if not items:
+            print("ℹ️ 活动代理列表中暂无可用节点。")
+            return
+            
+        print("\n" + "="*60)
+        print("🚀 【V2RayN 导入链接 - 直接复制即可】")
+        print("-" * 60)
+        
+        for item in items:
+            user = item.get('proxy_user', '')
+            pw = item.get('proxy_pass', '')
+            ip = item.get('proxy_ip', '')
+            port = item.get('proxy_port', '')
+            country = item.get('country_code', 'Proxy')
+            
+            # 1. 拼接 Auth 字符串并 Base64 编码
+            auth_str = f"{user}:{pw}"
+            auth_b64 = base64.b64encode(auth_str.encode()).decode()
+            
+            # 2. 拼接完整的 SOCKS 链接
+            # 格式: socks://{auth_b64}@{ip}:{port}#{remark}
+            link = f"socks://{auth_b64}@{ip}:{port}#{country}-{ip}"
+            
+            print(f"🌍 [{country}] {link}")
+            
+        print("="*60 + "\n")
+        print("💡 提示: 在 V2RayN 中点击 '服务器' -> '从剪贴板导入批量 URL' 即可使用。")
+        
+    except Exception as e:
+        print(f"❌ 提取代理链接失败: {e}")
+
 def print_proxy_details(task):
     """美化打印代理奖励详情"""
     task_name = task.get('task_name', '未知任务')
@@ -141,6 +184,7 @@ def get_task_id():
                 if is_finished == 1:
                     print("✨ 检测到该任务已经处于完成状态（页面显示‘查看奖励’），无需继续操作。")
                     print_proxy_details(task)
+                    fetch_and_print_proxy_links()
                     return -1 # 返回特殊标识
                 
                 return task_id
@@ -215,6 +259,7 @@ def finish_task(task_id):
             print("🔄 正在刷新奖励详情以展示...")
             human_delay(2, 4, "正在同步服务器状态...")
             get_task_id() 
+            fetch_and_print_proxy_links()
             return True
         elif "invalid" in msg or "已经完成" in msg or "重复领取" in msg:
             print(f"⚠️ 提示: {res_json.get('msg')}。由于任务可能已在其他地方完成，本次视为成功退出。")
