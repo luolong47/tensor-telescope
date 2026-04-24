@@ -14,93 +14,18 @@ jobs:
       - name: 获取项目代码
         uses: actions/checkout@v4
 
+      - name: 设置 Python 环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: 安装 Python 依赖
+        run: |
+          pip install ddddocr requests
+
       - name: 执行领取脚本
         env:
-          # 从 GitHub Variables 读取邮箱，从 Secrets 读取密码
           EMAIL: ${{ vars.IP2FREE_EMAIL }}
           PASSWORD: ${{ secrets.IP2FREE_PASSWORD }}
           UA: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-        run: |
-          echo "=========================================="
-          # 随机延迟（0-300秒，即最高5分钟）以规避风控
-          DELAY=$((RANDOM % 300))
-          echo "⏱️ 为了规避风控，随机延迟 ${DELAY} 秒后执行..."
-          sleep $DELAY
-          
-          echo "🚀 开始登录程序..."
-          echo "=========================================="
-          
-          # 1. 自动登录获取 Token
-          LOGIN_RESPONSE=$(curl -s -X POST "https://api.ip2free.com/api/account/login?" \
-            -H "User-Agent: $UA" \
-            -H "Origin: https://www.ip2free.com" \
-            -H "Referer: https://www.ip2free.com/" \
-            -H "webname: IP2FREE" \
-            -H "content-type: text/plain;charset=UTF-8" \
-            -H "lang: cn" \
-            --data-binary "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}")
-
-          TOKEN=$(echo "$LOGIN_RESPONSE" | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
-
-          if [ -z "$TOKEN" ]; then
-            echo "❌ 登录失败！"
-            echo "服务器原始响应: $LOGIN_RESPONSE"
-            exit 1
-          fi
-
-          echo "✅ 登录成功，Token 已就绪"
-
-          echo "=========================================="
-          echo "🔍 正在动态获取任务 ID..."
-          
-          LIST_RESPONSE=$(curl -s "https://api.ip2free.com/api/account/taskList?" \
-            -H "User-Agent: $UA" \
-            -H "x-token: $TOKEN" \
-            -H "webname: IP2FREE" \
-            -H "content-type: text/plain;charset=UTF-8" \
-            -H "lang: cn" \
-            --data-binary "{}")
-
-          # 提取包含指定名称的任务 ID (jq 在 ubuntu-latest 中默认安装)
-          TASK_ID=$(echo "$LIST_RESPONSE" | jq -r '.data.list[] | select(.task_name | contains("点击就送")) | .id' | head -n 1)
-
-          if [ -z "$TASK_ID" ] || [ "$TASK_ID" = "null" ]; then
-            echo "⚠️ 未能动态获取到任务 ID，将使用默认推荐 ID 49130"
-            TASK_ID=49130
-          else
-            echo "🎯 发现任务 ID: $TASK_ID"
-          fi
-
-          # 模拟用户操作间隔，避免请求过快被风控
-          CLAIM_DELAY=$((RANDOM % 3 + 1))
-          echo "⏱️ 模拟用户操作间隔，延迟 ${CLAIM_DELAY} 秒后领取..."
-          sleep $CLAIM_DELAY
-
-          echo "🎁 正在尝试领取任务奖励 (ID: $TASK_ID)..."
-          echo "=========================================="
-
-          # 3. 执行领取奖励请求
-          CLAIM_RESPONSE=$(curl -s -X POST "https://api.ip2free.com/api/account/finishTask?" \
-            -H "User-Agent: $UA" \
-            -H "Origin: https://www.ip2free.com" \
-            -H "Referer: https://www.ip2free.com/" \
-            -H "x-token: $TOKEN" \
-            -H "webname: IP2FREE" \
-            -H "content-type: text/plain;charset=UTF-8" \
-            --data-binary "{\"id\":$TASK_ID}")
-
-          echo "--- 领取结果处理 ---"
-          echo "服务器响应: $CLAIM_RESPONSE"
-
-          # 4. 逻辑判定：尝试解析json进行判断
-          CODE=$(echo "$CLAIM_RESPONSE" | jq -r '.code' 2>/dev/null)
-          MSG=$(echo "$CLAIM_RESPONSE" | jq -r '.msg' 2>/dev/null)
-
-          if [ "$CODE" = "0" ]; then
-            echo "🎉 领取奖励成功！"
-            exit 0
-          else
-            echo "❌ 领取失败！(状态码: $CODE, 提示: $MSG)"
-            exit 1
-          fi
-          echo "=========================================="
+        run: python claim_reward.py
