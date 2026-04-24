@@ -30,7 +30,7 @@ jobs:
       - name: 缓存 Token
         uses: actions/cache@v4
         with:
-          path: token_cache.txt
+          path: token_cache_*.txt
           key: ${{ runner.os }}-ip2free-token-${{ github.run_id }}
           restore-keys: |
             ${{ runner.os }}-ip2free-token-
@@ -41,8 +41,7 @@ jobs:
 
       - name: 执行领取脚本
         env:
-          EMAIL: ${{ vars.IP2FREE_EMAIL }}
-          PASSWORD: ${{ secrets.IP2FREE_PASSWORD }}
+          IP2FREE_ACCOUNTS: ${{ secrets.IP2FREE_ACCOUNTS }}
           SHARE_KEY: ${{ secrets.SHARE_KEY }}
           UPDATE_URL: ${{ secrets.UPDATE_URL }}
           UA: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
