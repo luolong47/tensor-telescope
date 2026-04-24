@@ -94,15 +94,16 @@ import base64
 
 # 订阅更新配置
 SHARE_KEY = os.getenv('SHARE_KEY')
+UPDATE_URL = os.getenv('UPDATE_URL')
 
 def update_online_subscription(content_list):
     """自动更新在线分享的内容"""
-    if not SHARE_KEY:
-        print("⚠️ 未配置 SHARE_KEY 环境变量，跳过在线订阅更新。")
+    if not SHARE_KEY or not UPDATE_URL:
+        print("⚠️ 未配置 SHARE_KEY 或 UPDATE_URL 环境变量，跳过在线订阅更新。")
         return
 
-    print("📤 [Step 6] 正在同步到在线订阅服务...")
-    url = "https://www.928496.xyz/api/public/share/ad424524/update"
+    print(f"📤 [Step 6] 正在同步到在线订阅服务 (URL: {UPDATE_URL})...")
+    url = UPDATE_URL
     
     # 拼接代理内容，每行一个
     proxy_content = "\n".join(content_list)
