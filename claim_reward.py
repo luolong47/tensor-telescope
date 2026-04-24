@@ -95,11 +95,29 @@ import base64
 def fetch_and_print_proxy_links():
     """获取活动代理列表并生成 V2RayN 格式的链接"""
     print("🔗 [Step 5] 正在提取可用代理节点链接...")
-    url = "https://api.ip2free.com/api/account/myProxyList?page=1&limit=10"
+    # 尝试使用 POST 接口，并携带必要的参数
+    url = "https://api.ip2free.com/api/account/myProxyList?"
+    payload = {"page": 1, "limit": 10}
+    
+    print(f"📤 发送代理列表请求 | URL: {url} | Payload: {json.dumps(payload)}")
     
     try:
-        resp = session.get(url)
-        res_json = resp.json()
+        # 注意：这里改用 POST，并确保携带了 session 中的 headers
+        resp = session.post(url, json=payload)
+        
+        # 增加调试日志：如果不是 JSON，打印前 100 个字符
+        print(f"📥 代理列表响应状态码: {resp.status_code}")
+        if resp.status_code != 200:
+             print(f"❌ 请求失败，状态码: {resp.status_code} | 内容提示: {resp.text[:100]}")
+             return
+
+        try:
+            res_json = resp.json()
+        except:
+            print(f"❌ 响应不是有效的 JSON 格式！原始响应开头: {resp.text[:100]}")
+            return
+
+        print(f"📥 代理列表响应内容: {json.dumps(res_json, ensure_ascii=False)}")
         items = res_json.get('data', {}).get('items', [])
         
         if not items:
@@ -117,21 +135,22 @@ def fetch_and_print_proxy_links():
             port = item.get('proxy_port', '')
             country = item.get('country_code', 'Proxy')
             
+            if not all([user, pw, ip, port]):
+                continue
+
             # 1. 拼接 Auth 字符串并 Base64 编码
             auth_str = f"{user}:{pw}"
             auth_b64 = base64.b64encode(auth_str.encode()).decode()
             
             # 2. 拼接完整的 SOCKS 链接
-            # 格式: socks://{auth_b64}@{ip}:{port}#{remark}
             link = f"socks://{auth_b64}@{ip}:{port}#{country}-{ip}"
             
             print(f"🌍 [{country}] {link}")
             
         print("="*60 + "\n")
-        print("💡 提示: 在 V2RayN 中点击 '服务器' -> '从剪贴板导入批量 URL' 即可使用。")
         
     except Exception as e:
-        print(f"❌ 提取代理链接失败: {e}")
+        print(f"❌ 提取代理链接过程中出现异常: {e}")
 
 def print_proxy_details(task):
     """美化打印代理奖励详情"""
