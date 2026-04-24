@@ -144,8 +144,8 @@ def handle_captcha():
         res = ocr.classification(img_resp.content)
         print(f"🔢 OCR 识别完成 | 识别结果: {res} (尝试次序: {i+1}/3)")
         
-        if len(res) != 4:
-            print(f"⚠️ 识别结果异常 (长度为 {len(res)}，预期为 4 位)，将自动刷新重试...")
+        if len(res) < 4:
+            print(f"⚠️ 识别结果异常 (长度为 {len(res)}，不足 4 位)，将自动刷新重试...")
             continue
 
         # 模拟人类“看图并输入”的时间
