@@ -22,99 +22,143 @@ session.headers.update({
 })
 
 def login():
-    print("🚀 正在登录...")
+    print("🚀 [Step 1] 正在模拟用户登录...")
     url = "https://api.ip2free.com/api/account/login?"
+    
+    # 日志脱敏处理
+    log_data = {"email": EMAIL, "password": "***HIDDEN***"}
+    print(f"📤 发送登录请求 | URL: {url} | Payload: {json.dumps(log_data)}")
+    
     data = {"email": EMAIL, "password": PASSWORD}
     try:
         resp = session.post(url, json=data)
         res_json = resp.json()
+        print(f"📥 登录响应内容: {json.dumps(res_json, ensure_ascii=False)}")
+        
         token = res_json.get('data', {}).get('token')
         if token:
             session.headers.update({"x-token": token})
-            print("✅ 登录成功")
+            print("✅ 登录成功，Token 已保存到请求头")
             return True
         else:
-            print(f"❌ 登录失败: {resp.text}")
+            print(f"❌ 登录失败！服务器返回: {res_json.get('msg', '未知错误')}")
             return False
     except Exception as e:
-        print(f"❌ 登录异常: {e}")
+        print(f"❌ 登录过程中出现异常: {e}")
         return False
 
 def get_task_id():
-    print("🔍 正在获取任务 ID...")
+    # 模拟用户点击进入任务页面的时间间隔
+    human_delay(3, 7, "正在浏览任务中心...")
+    
+    print("🔍 [Step 2] 正在获取任务列表...")
     url = "https://api.ip2free.com/api/account/taskList?"
+    print(f"📤 发送任务列表请求 | URL: {url} | Payload: {{}}")
+    
     try:
         resp = session.post(url, json={})
         res_json = resp.json()
+        print(f"📥 任务列表响应内容: {json.dumps(res_json, ensure_ascii=False)}")
+        
         tasks = res_json.get('data', {}).get('list', [])
         for task in tasks:
             if "点击就送" in task.get('task_name', ''):
-                print(f"🎯 发现任务 ID: {task.get('id')}")
-                return task.get('id')
-        print("⚠️ 未能获取到动态任务 ID，使用默认 ID 49130")
+                task_id = task.get('id')
+                print(f"🎯 成功匹配任务: '{task.get('task_name')}' | ID: {task_id}")
+                return task_id
+        
+        print("⚠️ 未能在列表中发现匹配任务，尝试使用兜底 ID 49130")
         return 49130
     except Exception as e:
-        print(f"⚠️ 获取任务列表失败，使用默认 ID 49130. 错误: {e}")
+        print(f"⚠️ 获取任务列表失败: {e}，将尝试使用兜底 ID")
         return 49130
 
 def handle_captcha():
-    print("🖼️ 正在获取并识别验证码...")
+    print("🖼️ [Step 3] 发现需要验证码，正在准备识别...")
     ocr = ddddocr.DdddOcr(show_ad=False)
     
-    # 多次尝试，防止识别错误
     for i in range(3):
+        human_delay(2, 4, "正在加载验证码图片...")
         captcha_url = "https://api.ip2free.com/api/account/captcha?"
+        print(f"📤 获取验证码图片 | URL: {captcha_url}")
+        
         img_resp = session.get(captcha_url)
         if img_resp.status_code != 200:
-            print("❌ 获取验证码图片失败")
+            print(f"❌ 验证码下载失败，状态码: {img_resp.status_code}")
             continue
             
+        # OCR 识别
         res = ocr.classification(img_resp.content)
-        print(f"🔢 第 {i+1} 次识别结果: {res}")
+        print(f"🔢 OCR 识别完成 | 识别结果: {res} (尝试次序: {i+1}/3)")
         
-        # 校验验证码
+        # 模拟人类“看图并输入”的时间
+        human_delay(2, 4, "正在输入验证码并点击校验...")
+        
         check_url = "https://api.ip2free.com/api/account/checkCaptcha?"
-        check_resp = session.post(check_url, json={"code": res})
-        if check_resp.json().get('code') == 0:
-            print("✅ 验证码校验通过")
+        check_payload = {"code": res}
+        print(f"📤 发送校验请求 | URL: {check_url} | Payload: {json.dumps(check_payload)}")
+        
+        check_resp = session.post(check_url, json=check_payload)
+        check_res_json = check_resp.json()
+        print(f"📥 校验响应内容: {json.dumps(check_res_json, ensure_ascii=False)}")
+        
+        if check_res_json.get('code') == 0:
+            print("✅ 验证码校验通过，安全校验已完成")
             return True
         else:
-            print(f"❌ 验证码校验失败: {check_resp.text}，准备重试...")
-            time.sleep(1)
+            print(f"❌ 验证码错误: {check_res_json.get('msg')}，正在刷新验证码重试...")
             
+    print("❌ 连续 3 次验证码校验失败，放弃任务")
     return False
 
 def finish_task(task_id):
-    print(f"🎁 正在领取奖励 (ID: {task_id})...")
+    human_delay(3, 6, "正在点击‘立即领取’按钮...")
+    
+    print(f"🎁 [Step 4] 正在执行最终领取操作 (TaskID: {task_id})...")
     url = "https://api.ip2free.com/api/account/finishTask?"
+    payload = {"id": task_id}
+    print(f"📤 发送领取请求 | URL: {url} | Payload: {json.dumps(payload)}")
+    
     try:
-        resp = session.post(url, json={"id": task_id})
+        resp = session.post(url, json=payload)
         res_json = resp.json()
+        print(f"📥 领取结果响应内容: {json.dumps(res_json, ensure_ascii=False)}")
+        
         if res_json.get('code') == 0:
-            print(f"🎉 领取成功！消息: {res_json.get('msg')}")
+            print(f"🎉 任务圆满完成！服务器消息: {res_json.get('msg')}")
             return True
         else:
-            print(f"❌ 领取失败: {res_json.get('msg')} (Code: {res_json.get('code')})")
+            print(f"❌ 领取失败！原因: {res_json.get('msg')} (Code: {res_json.get('code')})")
             return False
     except Exception as e:
-        print(f"❌ 领取异常: {e}")
+        print(f"❌ 请求过程中出现异常: {e}")
         return False
 
+def human_delay(min_s, max_s, action="正在等待..."):
+    s = random.uniform(min_s, max_s)
+    print(f"⏱️ {action} (拟人化延迟: {s:.2f}秒)")
+    time.sleep(s)
+
 if __name__ == "__main__":
+    print("==========================================")
+    print("🌟 IP2Free 自动化助手 - 增强调试模式启动")
+    print("==========================================")
+    
     if not EMAIL or not PASSWORD:
-        print("❌ 错误: 环境变量 EMAIL 或 PASSWORD 未设置")
+        print("❌ 错误: 环境变量 EMAIL 或 PASSWORD 未设置，请检查 GitHub Secrets/Vars")
         sys.exit(1)
         
-    # 随机延迟
-    delay = random.randint(0, 10)
-    print(f"⏱️ 随机延迟 {delay} 秒...")
-    time.sleep(delay)
+    # 初始入口延迟
+    human_delay(5, 15, "正在打开首页...")
     
     if login():
         task_id = get_task_id()
         if handle_captcha():
             if finish_task(task_id):
-                print("🏁 任务完成")
+                print("\n🏁 [DONE] 所有步骤已成功执行，奖励已到账。")
+                print("==========================================")
                 sys.exit(0)
     
+    print("\n🚫 [FAILED] 任务未能完成，请检查上述详细日志进行排查。")
+    print("==========================================")
     sys.exit(1)
