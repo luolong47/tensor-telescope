@@ -43,5 +43,8 @@ jobs:
         env:
           EMAIL: ${{ vars.IP2FREE_EMAIL }}
           PASSWORD: ${{ secrets.IP2FREE_PASSWORD }}
+          MAIL_USER: ${{ vars.MAIL_USER }}
+          MAIL_PASS: ${{ secrets.MAIL_PASS }}
+          MAIL_RECEIVER: ${{ vars.MAIL_RECEIVER }}
           UA: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
         run: python claim_reward.py

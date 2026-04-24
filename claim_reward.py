@@ -92,6 +92,53 @@ def login():
 
 import base64
 
+import smtplib
+from email.mime.text import MIMEText
+from email.header import Header
+
+# 邮件配置 (从环境变量读取)
+MAIL_USER = os.getenv('MAIL_USER')     # 发送者 QQ 邮箱
+MAIL_PASS = os.getenv('MAIL_PASS')     # QQ 邮箱授权码
+MAIL_RECEIVER = os.getenv('MAIL_RECEIVER') # 接收者邮箱 (若不填则默认发给自己)
+
+def send_email(content_list):
+    """通过 QQ 邮箱发送代理信息"""
+    if not MAIL_USER or not MAIL_PASS:
+        print("⚠️ 未配置邮件环境变量 (MAIL_USER/MAIL_PASS)，跳过邮件发送。")
+        return
+
+    receiver = MAIL_RECEIVER if MAIL_RECEIVER else MAIL_USER
+    
+    # 构造邮件内容 (HTML 格式更美观)
+    html_content = f"""
+    <html>
+    <body>
+        <h2 style="color: #4CAF50;">🚀 IP2Free 每日代理订阅更新</h2>
+        <p>您好，今日自动领取的代理节点如下，请直接复制到 V2RayN 导入：</p>
+        <div style="background-color: #f4f4f4; padding: 15px; border-radius: 5px; font-family: monospace;">
+            {"<br>".join(content_list)}
+        </div>
+        <br>
+        <p style="font-size: 12px; color: #888;">本邮件由 GitHub Actions 自动发出，请勿回复。</p>
+    </body>
+    </html>
+    """
+    
+    message = MIMEText(html_content, 'html', 'utf-8')
+    message['From'] = MAIL_USER
+    message['To'] = receiver
+    message['Subject'] = Header('🌐 今日代理节点更新', 'utf-8')
+
+    try:
+        # QQ 邮箱使用 SSL，端口 465
+        smtp_obj = smtplib.SMTP_SSL("smtp.qq.com", 465)
+        smtp_obj.login(MAIL_USER, MAIL_PASS)
+        smtp_obj.sendmail(MAIL_USER, [receiver], message.as_string())
+        smtp_obj.quit()
+        print(f"📧 邮件发送成功！已发送至: {receiver}")
+    except Exception as e:
+        print(f"❌ 邮件发送失败: {e}")
+
 def fetch_and_print_proxy_links():
     """获取活动代理列表并生成 V2RayN 格式的链接"""
     print("🔗 [Step 5] 正在提取可用代理节点链接...")
@@ -104,22 +151,18 @@ def fetch_and_print_proxy_links():
         resp = session.post(url, json=payload)
         
         if resp.status_code != 200:
-             print(f"❌ 请求失败，状态码: {resp.status_code} | 内容提示: {resp.text[:100]}")
+             print(f"❌ 请求失败，状态码: {resp.status_code}")
              return
 
-        try:
-            res_json = resp.json()
-        except:
-            print(f"❌ 响应不是有效的 JSON 格式！原始响应开头: {resp.text[:100]}")
-            return
-
-        print(f"📥 代理列表响应内容: {json.dumps(res_json, ensure_ascii=False)}")
+        res_json = resp.json()
         items = res_json.get('data', {}).get('page', {}).get('list', [])
         
         if not items:
             print("ℹ️ 活动代理列表中暂无可用节点。")
             return
             
+        link_list = [] # 用于邮件发送的链接列表
+        
         print("\n" + "="*60)
         print("🚀 【V2RayN 导入链接 - 直接复制即可】")
         print("-" * 60)
@@ -134,16 +177,18 @@ def fetch_and_print_proxy_links():
             if not all([user, pw, ip, port]):
                 continue
 
-            # 1. 拼接 Auth 字符串并 Base64 编码
             auth_str = f"{user}:{pw}"
             auth_b64 = base64.b64encode(auth_str.encode()).decode()
-            
-            # 2. 拼接完整的 SOCKS 链接
             link = f"socks://{auth_b64}@{ip}:{port}#{country}-{ip}"
             
             print(f"🌍 [{country}] {link}")
+            link_list.append(link)
             
         print("="*60 + "\n")
+        
+        # 发送邮件
+        if link_list:
+            send_email(link_list)
         
     except Exception as e:
         print(f"❌ 提取代理链接过程中出现异常: {e}")
