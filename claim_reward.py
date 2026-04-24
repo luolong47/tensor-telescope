@@ -90,6 +90,30 @@ def login():
         print(f"❌ 登录过程中出现异常: {e}")
         return False
 
+def print_proxy_details(task):
+    """美化打印代理奖励详情"""
+    task_name = task.get('task_name', '未知任务')
+    items = task.get('items', [])
+    
+    print("\n" + "="*40)
+    print(f"📊 【代理奖励详情】")
+    print(f"任务名称: {task_name}")
+    print("-" * 20)
+    
+    if not items:
+        print("ℹ️ 暂无具体的代理明细数据。")
+    else:
+        for item in items:
+            country = item.get('country_code', '未知')
+            qty = item.get('quantity', 0)
+            print(f"📍 国家/地区: {country.ljust(6)} | 数量: {qty} 条/天")
+    
+    finish_at = task.get('finished_at')
+    if finish_at:
+        print(f"⏰ 领取时间: {finish_at}")
+    
+    print("="*40 + "\n")
+
 def get_task_id():
     # 模拟用户点击进入任务页面的时间间隔
     human_delay(3, 7, "正在浏览任务中心...")
@@ -116,6 +140,7 @@ def get_task_id():
                 
                 if is_finished == 1:
                     print("✨ 检测到该任务已经处于完成状态（页面显示‘查看奖励’），无需继续操作。")
+                    print_proxy_details(task)
                     return -1 # 返回特殊标识
                 
                 return task_id
@@ -186,6 +211,10 @@ def finish_task(task_id):
         
         if code == 0:
             print(f"🎉 任务圆满完成！服务器消息: {res_json.get('msg')}")
+            # 领取成功后，再次获取任务列表以显示最新的奖励详情
+            print("🔄 正在刷新奖励详情以展示...")
+            human_delay(2, 4, "正在同步服务器状态...")
+            get_task_id() 
             return True
         elif "invalid" in msg or "已经完成" in msg or "重复领取" in msg:
             print(f"⚠️ 提示: {res_json.get('msg')}。由于任务可能已在其他地方完成，本次视为成功退出。")
