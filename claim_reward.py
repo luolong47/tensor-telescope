@@ -21,11 +21,53 @@ session.headers.update({
     "content-type": "text/plain;charset=UTF-8"
 })
 
+TOKEN_FILE = "token_cache.txt"
+
+def load_token():
+    if os.path.exists(TOKEN_FILE):
+        try:
+            with open(TOKEN_FILE, 'r') as f:
+                token = f.read().strip()
+                if token:
+                    print(f"📖 发现本地缓存 Token: {token[:10]}***")
+                    return token
+        except:
+            pass
+    return None
+
+def save_token(token):
+    try:
+        with open(TOKEN_FILE, 'w') as f:
+            f.write(token)
+        print("💾 Token 已缓存到本地文件")
+    except Exception as e:
+        print(f"⚠️ 缓存 Token 失败: {e}")
+
+def is_token_valid():
+    """通过请求任务列表校验当前 Token 是否有效"""
+    url = "https://api.ip2free.com/api/account/taskList?"
+    try:
+        resp = session.post(url, json={}, timeout=10)
+        res_json = resp.json()
+        # 如果 code 为 0，说明 token 有效
+        return res_json.get('code') == 0
+    except:
+        return False
+
 def login():
+    # 1. 尝试从缓存加载
+    cached_token = load_token()
+    if cached_token:
+        session.headers.update({"x-token": cached_token})
+        if is_token_valid():
+            print("✨ 缓存 Token 有效，跳过登录步骤")
+            return True
+        else:
+            print("♻️ 缓存 Token 已过期或失效，准备重新登录...")
+
+    # 2. 正式登录逻辑
     print("🚀 [Step 1] 正在模拟用户登录...")
     url = "https://api.ip2free.com/api/account/login?"
-    
-    # 日志脱敏处理
     log_data = {"email": EMAIL, "password": "***HIDDEN***"}
     print(f"📤 发送登录请求 | URL: {url} | Payload: {json.dumps(log_data)}")
     
@@ -38,7 +80,8 @@ def login():
         token = res_json.get('data', {}).get('token')
         if token:
             session.headers.update({"x-token": token})
-            print("✅ 登录成功，Token 已保存到请求头")
+            save_token(token)
+            print("✅ 登录成功，新 Token 已保存")
             return True
         else:
             print(f"❌ 登录失败！服务器返回: {res_json.get('msg', '未知错误')}")
@@ -122,13 +165,19 @@ def finish_task(task_id):
     try:
         resp = session.post(url, json=payload)
         res_json = resp.json()
+        msg = res_json.get('msg', '').lower()
+        code = res_json.get('code')
+        
         print(f"📥 领取结果响应内容: {json.dumps(res_json, ensure_ascii=False)}")
         
-        if res_json.get('code') == 0:
+        if code == 0:
             print(f"🎉 任务圆满完成！服务器消息: {res_json.get('msg')}")
             return True
+        elif "invalid" in msg or "已经完成" in msg or "重复领取" in msg:
+            print(f"⚠️ 提示: {res_json.get('msg')}。由于任务可能已在其他地方完成，本次视为成功退出。")
+            return True
         else:
-            print(f"❌ 领取失败！原因: {res_json.get('msg')} (Code: {res_json.get('code')})")
+            print(f"❌ 领取失败！原因: {res_json.get('msg')} (Code: {code})")
             return False
     except Exception as e:
         print(f"❌ 请求过程中出现异常: {e}")
