@@ -92,52 +92,37 @@ def login():
 
 import base64
 
-import smtplib
-from email.mime.text import MIMEText
-from email.header import Header
+# 订阅更新配置
+SHARE_KEY = os.getenv('SHARE_KEY')
 
-# 邮件配置 (从环境变量读取)
-MAIL_USER = os.getenv('MAIL_USER')     # 发送者 QQ 邮箱
-MAIL_PASS = os.getenv('MAIL_PASS')     # QQ 邮箱授权码
-MAIL_RECEIVER = os.getenv('MAIL_RECEIVER') # 接收者邮箱 (若不填则默认发给自己)
-
-def send_email(content_list):
-    """通过 QQ 邮箱发送代理信息"""
-    if not MAIL_USER or not MAIL_PASS:
-        print("⚠️ 未配置邮件环境变量 (MAIL_USER/MAIL_PASS)，跳过邮件发送。")
+def update_online_subscription(content_list):
+    """自动更新在线分享的内容"""
+    if not SHARE_KEY:
+        print("⚠️ 未配置 SHARE_KEY 环境变量，跳过在线订阅更新。")
         return
 
-    receiver = MAIL_RECEIVER if MAIL_RECEIVER else MAIL_USER
+    print("📤 [Step 6] 正在同步到在线订阅服务...")
+    url = "https://www.928496.xyz/api/public/share/ad424524/update"
     
-    # 构造邮件内容 (HTML 格式更美观)
-    html_content = f"""
-    <html>
-    <body>
-        <h2 style="color: #4CAF50;">🚀 IP2Free 每日代理订阅更新</h2>
-        <p>您好，今日自动领取的代理节点如下，请直接复制到 V2RayN 导入：</p>
-        <div style="background-color: #f4f4f4; padding: 15px; border-radius: 5px; font-family: monospace;">
-            {"<br>".join(content_list)}
-        </div>
-        <br>
-        <p style="font-size: 12px; color: #888;">本邮件由 GitHub Actions 自动发出，请勿回复。</p>
-    </body>
-    </html>
-    """
+    # 拼接代理内容，每行一个
+    proxy_content = "\n".join(content_list)
     
-    message = MIMEText(html_content, 'html', 'utf-8')
-    message['From'] = MAIL_USER
-    message['To'] = receiver
-    message['Subject'] = Header('🌐 今日代理节点更新', 'utf-8')
-
+    payload = {
+        "editToken": SHARE_KEY,
+        "content": proxy_content
+    }
+    
     try:
-        # QQ 邮箱使用 SSL，端口 465
-        smtp_obj = smtplib.SMTP_SSL("smtp.qq.com", 465)
-        smtp_obj.login(MAIL_USER, MAIL_PASS)
-        smtp_obj.sendmail(MAIL_USER, [receiver], message.as_string())
-        smtp_obj.quit()
-        print(f"📧 邮件发送成功！已发送至: {receiver}")
+        # 使用通用 session 请求（保持 User-Agent 等）
+        resp = session.post(url, json=payload, timeout=15)
+        res_json = resp.json()
+        
+        if res_json.get('code') == 200 or res_json.get('success') is True or "success" in str(res_json).lower():
+            print(f"✅ 在线订阅更新成功！API 响应: {json.dumps(res_json, ensure_ascii=False)}")
+        else:
+            print(f"❌ 在线订阅更新失败！响应内容: {resp.text}")
     except Exception as e:
-        print(f"❌ 邮件发送失败: {e}")
+        print(f"❌ 在线订阅同步异常: {e}")
 
 def fetch_and_print_proxy_links():
     """获取活动代理列表并生成 V2RayN 格式的链接"""
@@ -161,7 +146,7 @@ def fetch_and_print_proxy_links():
             print("ℹ️ 活动代理列表中暂无可用节点。")
             return
             
-        link_list = [] # 用于邮件发送的链接列表
+        link_list = [] # 用于订阅同步的链接列表
         
         print("\n" + "="*60)
         print("🚀 【V2RayN 导入链接 - 直接复制即可】")
@@ -186,9 +171,9 @@ def fetch_and_print_proxy_links():
             
         print("="*60 + "\n")
         
-        # 发送邮件
+        # 同步到在线订阅
         if link_list:
-            send_email(link_list)
+            update_online_subscription(link_list)
         
     except Exception as e:
         print(f"❌ 提取代理链接过程中出现异常: {e}")
