@@ -95,18 +95,14 @@ import base64
 def fetch_and_print_proxy_links():
     """获取活动代理列表并生成 V2RayN 格式的链接"""
     print("🔗 [Step 5] 正在提取可用代理节点链接...")
-    # 尝试使用 POST 接口，并携带必要的参数
-    url = "https://api.ip2free.com/api/account/myProxyList?"
-    payload = {"page": 1, "limit": 10}
+    url = "https://api.ip2free.com/api/ip/taskIpList?"
+    payload = {"keyword":"","country":"","city":"","page":1,"page_size":10}
     
     print(f"📤 发送代理列表请求 | URL: {url} | Payload: {json.dumps(payload)}")
     
     try:
-        # 注意：这里改用 POST，并确保携带了 session 中的 headers
         resp = session.post(url, json=payload)
         
-        # 增加调试日志：如果不是 JSON，打印前 100 个字符
-        print(f"📥 代理列表响应状态码: {resp.status_code}")
         if resp.status_code != 200:
              print(f"❌ 请求失败，状态码: {resp.status_code} | 内容提示: {resp.text[:100]}")
              return
@@ -118,7 +114,7 @@ def fetch_and_print_proxy_links():
             return
 
         print(f"📥 代理列表响应内容: {json.dumps(res_json, ensure_ascii=False)}")
-        items = res_json.get('data', {}).get('items', [])
+        items = res_json.get('data', {}).get('page', {}).get('list', [])
         
         if not items:
             print("ℹ️ 活动代理列表中暂无可用节点。")
@@ -129,10 +125,10 @@ def fetch_and_print_proxy_links():
         print("-" * 60)
         
         for item in items:
-            user = item.get('proxy_user', '')
-            pw = item.get('proxy_pass', '')
-            ip = item.get('proxy_ip', '')
-            port = item.get('proxy_port', '')
+            user = item.get('username', '')
+            pw = item.get('password', '')
+            ip = item.get('ip', '')
+            port = item.get('port', '')
             country = item.get('country_code', 'Proxy')
             
             if not all([user, pw, ip, port]):
