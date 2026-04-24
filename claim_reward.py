@@ -144,6 +144,10 @@ def handle_captcha():
         res = ocr.classification(img_resp.content)
         print(f"🔢 OCR 识别完成 | 识别结果: {res} (尝试次序: {i+1}/3)")
         
+        if len(res) != 4:
+            print(f"⚠️ 识别结果异常 (长度为 {len(res)}，预期为 4 位)，将自动刷新重试...")
+            continue
+
         # 模拟人类“看图并输入”的时间
         human_delay(2, 4, "正在输入验证码并点击校验...")
         
@@ -161,7 +165,7 @@ def handle_captcha():
         else:
             print(f"❌ 验证码错误: {check_res_json.get('msg')}，正在刷新验证码重试...")
             
-    print("❌ 连续 3 次验证码校验失败，放弃任务")
+    print("❌ 连续 3 次验证码校验失败或格式错误，放弃任务")
     return False
 
 def finish_task(task_id):
