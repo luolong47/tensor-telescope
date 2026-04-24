@@ -105,9 +105,18 @@ def get_task_id():
         
         tasks = res_json.get('data', {}).get('list', [])
         for task in tasks:
-            if "点击就送" in task.get('task_name', ''):
+            task_name = task.get('task_name', '')
+            if "点击就送" in task_name:
                 task_id = task.get('id')
-                print(f"🎯 成功匹配任务: '{task.get('task_name')}' | ID: {task_id}")
+                # 检查任务状态：is_finish 为 1 表示已完成（即页面显示“查看奖励”）
+                is_finish = task.get('is_finish')
+                
+                print(f"🎯 发现目标任务: '{task_name}' | ID: {task_id} | 状态码(is_finish): {is_finish}")
+                
+                if is_finish == 1:
+                    print("✨ 检测到该任务已经处于完成状态（页面显示‘查看奖励’），无需继续操作。")
+                    return -1 # 返回特殊标识
+                
                 return task_id
         
         print("⚠️ 未能在列表中发现匹配任务，尝试使用兜底 ID 49130")
@@ -202,6 +211,13 @@ if __name__ == "__main__":
     
     if login():
         task_id = get_task_id()
+        
+        if task_id == -1:
+            print("\n🎉 今日任务之前已经手动或自动完成了，无需重复操作。")
+            print("🏁 [DONE] 任务成功退出。")
+            print("==========================================")
+            sys.exit(0)
+            
         if handle_captcha():
             if finish_task(task_id):
                 print("\n🏁 [DONE] 所有步骤已成功执行，奖励已到账。")
