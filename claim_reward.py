@@ -108,12 +108,13 @@ def get_task_id():
             task_name = task.get('task_name', '')
             if "点击就送" in task_name:
                 task_id = task.get('id')
-                # 检查任务状态：is_finish 为 1 表示已完成（即页面显示“查看奖励”）
-                is_finish = task.get('is_finish')
+                # 检查任务状态：服务器返回字段名为 is_finished
+                # 如果 is_finished 为 1，说明页面显示“查看奖励”
+                is_finished = task.get('is_finished') or task.get('is_finish')
                 
-                print(f"🎯 发现目标任务: '{task_name}' | ID: {task_id} | 状态码(is_finish): {is_finish}")
+                print(f"🎯 发现目标任务: '{task_name}' | ID: {task_id} | 状态码(is_finished): {is_finished}")
                 
-                if is_finish == 1:
+                if is_finished == 1:
                     print("✨ 检测到该任务已经处于完成状态（页面显示‘查看奖励’），无需继续操作。")
                     return -1 # 返回特殊标识
                 
