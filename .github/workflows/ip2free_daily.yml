@@ -44,6 +44,6 @@ jobs:
           EMAIL: ${{ vars.IP2FREE_EMAIL }}
           PASSWORD: ${{ secrets.IP2FREE_PASSWORD }}
           SHARE_KEY: ${{ secrets.SHARE_KEY }}
-          UPDATE_URL: ${{ vars.UPDATE_URL }}
+          UPDATE_URL: ${{ secrets.UPDATE_URL }}
           UA: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
         run: python claim_reward.py

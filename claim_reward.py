@@ -75,8 +75,6 @@ def login():
     try:
         resp = session.post(url, json=data)
         res_json = resp.json()
-        print(f"📥 登录响应内容: {json.dumps(res_json, ensure_ascii=False)}")
-        
         token = res_json.get('data', {}).get('token')
         if token:
             session.headers.update({"x-token": token})
@@ -99,10 +97,10 @@ UPDATE_URL = os.getenv('UPDATE_URL')
 def update_online_subscription(content_list):
     """自动更新在线分享的内容"""
     if not SHARE_KEY or not UPDATE_URL:
-        print("⚠️ 未配置 SHARE_KEY 或 UPDATE_URL 环境变量，跳过在线订阅更新。")
+        print("⚠️ 未配置在线订阅环境变量，跳过同步。")
         return
 
-    print(f"📤 [Step 6] 正在同步到在线订阅服务 (URL: {UPDATE_URL})...")
+    print("📤 [Step 6] 正在同步到在线订阅服务...")
     url = UPDATE_URL
     
     # 拼接代理内容，每行一个
@@ -114,16 +112,15 @@ def update_online_subscription(content_list):
     }
     
     try:
-        # 使用通用 session 请求（保持 User-Agent 等）
         resp = session.post(url, json=payload, timeout=15)
         res_json = resp.json()
         
-        if res_json.get('code') == 200 or res_json.get('success') is True or "success" in str(res_json).lower():
-            print(f"✅ 在线订阅更新成功！API 响应: {json.dumps(res_json, ensure_ascii=False)}")
+        if res_json.get('code') == 200 or res_json.get('success') is True:
+            print("✅ 在线订阅更新成功！")
         else:
-            print(f"❌ 在线订阅更新失败！响应内容: {resp.text}")
+            print("❌ 在线订阅更新失败！")
     except Exception as e:
-        print(f"❌ 在线订阅同步异常: {e}")
+        print("❌ 在线订阅同步异常。")
 
 def fetch_and_print_proxy_links():
     """获取活动代理列表并生成 V2RayN 格式的链接"""
@@ -147,11 +144,7 @@ def fetch_and_print_proxy_links():
             print("ℹ️ 活动代理列表中暂无可用节点。")
             return
             
-        link_list = [] # 用于订阅同步的链接列表
-        
-        print("\n" + "="*60)
-        print("🚀 【V2RayN 导入链接 - 直接复制即可】")
-        print("-" * 60)
+        link_list = [] 
         
         for item in items:
             user = item.get('username', '')
@@ -166,11 +159,9 @@ def fetch_and_print_proxy_links():
             auth_str = f"{user}:{pw}"
             auth_b64 = base64.b64encode(auth_str.encode()).decode()
             link = f"socks://{auth_b64}@{ip}:{port}#{country}-{ip}"
-            
-            print(f"🌍 [{country}] {link}")
             link_list.append(link)
             
-        print("="*60 + "\n")
+        print(f"✨ 成功提取到 {len(link_list)} 个可用代理节点。")
         
         # 同步到在线订阅
         if link_list:
@@ -214,8 +205,6 @@ def get_task_id():
     try:
         resp = session.post(url, json={})
         res_json = resp.json()
-        print(f"📥 任务列表响应内容: {json.dumps(res_json, ensure_ascii=False)}")
-        
         tasks = res_json.get('data', {}).get('list', [])
         for task in tasks:
             task_name = task.get('task_name', '')
@@ -272,7 +261,6 @@ def handle_captcha():
         
         check_resp = session.post(check_url, json=check_payload)
         check_res_json = check_resp.json()
-        print(f"📥 校验响应内容: {json.dumps(check_res_json, ensure_ascii=False)}")
         
         if check_res_json.get('code') == 0:
             print("✅ 验证码校验通过，安全校验已完成")
@@ -296,8 +284,6 @@ def finish_task(task_id):
         res_json = resp.json()
         msg = res_json.get('msg', '').lower()
         code = res_json.get('code')
-        
-        print(f"📥 领取结果响应内容: {json.dumps(res_json, ensure_ascii=False)}")
         
         if code == 0:
             print(f"🎉 任务圆满完成！服务器消息: {res_json.get('msg')}")
